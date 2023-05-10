@@ -1,0 +1,59 @@
+@prefix ndbi040: <http://ndbi040/ontology/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix time: <http://www.w3.org/2006/time#> .
+@prefix aiiso: <http://purl.org/vocab/aiiso/schema#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+
+ndbi040:SubjectInstance a rdfs:Class ;
+  rdfs:label "Instance of a specific subject"@en ;
+  rdfs:subClassOf time:DateTimeDescription .
+
+ndbi040:instanceOf a rdfs:Property ;
+  rdfs:label "instance of"@en ;
+  rdfs:range aiiso:Subject ;
+  rdfs:domain ndbi040:SubjectInstance .
+
+ndbi040:Student a rdfs:Class ;
+  rdfs:subClassOf foaf:Person ;
+  rdfs:label "Student"@en .
+
+ndbi040:studies a rdfs:Property ;
+  rdfs:label "studies"@en ;
+  rdfs:range ndbi040:SubjectInstance ;
+  rdfs:domain ndbi040:Student .
+
+ndbi040:teaches a rdfs:Property ;
+  rdfs:label "teaches"@en ;
+  rdfs:range ndbi040:SubjectInstance ;
+  rdfs:domain ndbi040:Teacher .
+
+ndbi040:EnrollmentInterval a rdfs:Class ;
+  rdfs:subClassOf time:DateTimeInterval .
+
+ndbi040:enrolled a rdfs:Property ;
+  rdfs:label "enrolled"@en ;
+  rdfs:range ndbi040:EnrollmentInterval ;
+  rdfs:domain ndbi040:Student .
+
+ndbi040:programme a rdfs:Property ;
+  rdfs:label "programme"@en ;
+  rdfs:domain ndbi040:EnrollmentInterval ;
+  rdfs:range aiiso:Programme .
+
+ndbi040:Teacher a rdfs:Class ;
+  rdfs:subClassOf foaf:Person ;
+  rdfs:label "Teacher"@en .
+
+ndbi040:Degree a rdfs:Class ;
+  rdfs:label "Academic degree"@en .
+
+ndbi040:hasDegree a rdfs:Property ;
+  rdfs:label "has degree"@en ;
+  rdfs:range ndbi040:Degree ;
+  rdfs:domain foaf:Person .
+
+ndbi040:salary a rdfs:Property ;
+  rdfs:label "monthly salary"@en ;
+  rdfs:range xsd:integer ;
+  rdfs:domain foaf:Person .

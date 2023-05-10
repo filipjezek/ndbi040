@@ -1,0 +1,50 @@
+prefix ndbi040: <http://ndbi040/ontology/>
+prefix aiiso: <http://purl.org/vocab/aiiso/schema#>
+prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+prefix time: <http://www.w3.org/2006/time#>
+prefix foaf: <http://xmlns.com/foaf/0.1/>
+prefix vcard: <http://www.w3.org/2006/vcard/ns#>
+
+# classes for our IRIs
+create iri class ndbi040:programme_iri "http://ndbi040/data/programme/%d" (in id integer not null) .
+create iri class ndbi040:subject_iri "http://ndbi040/data/subject/%d" (in id integer not null) .
+create iri class ndbi040:subject_instance_iri "http://ndbi040/data/subject/%d/%d" (in subj integer not null, in instance integer not null) .
+create iri class ndbi040:person_iri "http://ndbi040/data/person/%d" (in id integer not null) .
+create iri class ndbi040:enrollment_interval_iri "http://ndbi040/data/enrollment/%d" (in id integer not null) .
+create iri class ndbi040:time_instant_iri "http://ndbi040/data/time_instant/%U" (in t datetime not null) .
+
+alter quad storage virtrdf:DefaultQuadStorage {
+create virtrdf:ndbi040 as graph <http://ndbi040/>
+  {
+    ndbi040:programme_iri (DB.DBA.programmes.id) a aiiso:Programme ;
+      rdfs:label DB.DBA.programmes.name .
+    ndbi040:subject_iri (DB.DBA.subjects.id) a aiiso:Subject ;
+      rdfs:label DB.DBA.subjects.name .
+    ndbi040:subject_instance_iri (DB.DBA.subject_instances.id, DB.DBA.subject_instances.instanceof) a ndbi040:SubjectInstance ;
+      ndbi040:instanceOf ndbi040:subject_iri (DB.DBA.subject_instances.instanceof) ;
+      time:year DB.DBA.subject_instances.year .
+    
+    ndbi040:person_iri (DB.DBA.people.id) a foaf:Person ;
+      foaf:name DB.DBA.people.name ;
+      vcard:bday DB.DBA.people.birth_date .
+
+    ndbi040:person_iri (DB.DBA.students.id) a foaf:Student .
+    ndbi040:person_iri (DB.DBA.students_subjects.student)
+      ndbi040:studies ndbi040:subject_iri (DB.DBA.students_subjects.subject) .
+    ndbi040:person_iri (DB.DBA.students_programmes.student)
+      ndbi040:enrolled ndbi040:enrollment_interval_iri (DB.DBA.students_programmes.id) .
+    ndbi040:enrollment_interval_iri (DB.DBA.students_programmes.id) a ndbi040:EnrollmentInterval ;
+      ndbi040:programme ndbi040:programme_iri (DB.DBA.students_programmes.programme) ;
+      time:hasBeginning ndbi040:time_instant_iri (DB.DBA.students_programmes.since) ;
+      time:hasEnd ndbi040:time_instant_iri (DB.DBA.students_programmes.to_) .
+    ndbi040:time_instant_iri (DB.DBA.students_programmes.since) time:inXSDDateTime DB.DBA.students_programmes.since .
+    ndbi040:time_instant_iri (DB.DBA.students_programmes.to_) time:inXSDDateTime DB.DBA.students_programmes.to_ .
+
+    ndbi040:person_iri (DB.DBA.teachers.id) a foaf:Teacher ;
+      ndbi040:salary DB.DBA.teachers.salary .
+    ndbi040:person_iri (DB.DBA.teachers_degrees.teacher) ndbi040:degree DB.DBA.teachers_degrees.degree .
+    ndbi040:person_iri (DB.DBA.teachers_subjects.teacher)
+      ndbi040:studies ndbi040:subject_iri (DB.DBA.teachers_subjects.subject) .
+
+  }
+}

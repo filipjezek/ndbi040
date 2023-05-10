@@ -15,15 +15,28 @@ class DataGenerator:
         )
         conn.setdecoding(pyodbc.SQL_CHAR, encoding='utf-8')
         conn.setdecoding(pyodbc.SQL_WCHAR, encoding='utf-8')
-        conn.setdecoding(pyodbc.SQL_WMETADATA, encoding='utf-8')
         conn.setencoding(encoding='utf-8')
         self.__cursor = conn.cursor()
         self.__cursor.execute('USE db')
         self.__word = wonderwords.RandomWord()
         self.__fake = Faker()
+        self.__table_names = [
+            'teachers_subjects',
+            'teachers_degrees',
+            'teachers',
+            'students_subjects',
+            'students_programmes',
+            'students',
+            'people',
+            'subject_instances',
+            'subjects',
+            'programmes'
+        ]
 
     def generate(self, programmes: int, subjects: int, subj_instances: int, students: int, teachers: int):
-        self.__drop_tables()
+        self.__drop_all_tables()
+        print('creating RDF schema...')
+        self.__insert_schema()
         print('generating programmes...')
         self.__generate_programmes(programmes)
         print('generate subjects...')
@@ -34,6 +47,10 @@ class DataGenerator:
         self.__generate_students(students)
         print('generate teachers...')
         self.__generate_teachers(teachers)
+        print('generate addresses...')
+        self.__generate_addresses()
+        print('mapping relational tables to rdf...')
+        self.__map_rel_to_rdf()
 
     def __generate_programmes(self, count: int):
         self.__cursor.execute(
@@ -70,19 +87,10 @@ class DataGenerator:
 
     def __generate_students(self, count: int):
         self.__cursor.execute(
-            """CREATE TABLE addresses (
-                id INT PRIMARY KEY IDENTITY,
-                city VARCHAR,
-                line1 VARCHAR,
-                line2 VARCHAR
-            )""")
-        self.__cursor.execute(
             """CREATE TABLE people (
                 id INT PRIMARY KEY IDENTITY,
                 name VARCHAR,
-                birth_date VARCHAR,
-                address INT,
-                FOREIGN KEY (address) REFERENCES addresses(id)
+                birth_date DATE
             )""")
         self.__cursor.execute(
             """CREATE TABLE students (
@@ -95,8 +103,8 @@ class DataGenerator:
                 id INT PRIMARY KEY IDENTITY,
                 student INT,
                 programme INT,
-                since_date VARCHAR,
-                to_date VARCHAR,
+                since DATE,
+                to_ DATE,
                 FOREIGN KEY (student) REFERENCES students(id),
                 FOREIGN KEY (programme) REFERENCES programmes(id)
             )""")
@@ -111,19 +119,15 @@ class DataGenerator:
             )""")
 
         self.__cursor.executemany(
-            'INSERT INTO addresses (city, line1, line2) VALUES (?, ?, ?)',
-            (val for val in self.__random_addresses(count))
-        )
-        self.__cursor.executemany(
-            'INSERT INTO people (name, birth_date, address) VALUES (?, ?, ?)',
-            ((*val, i) for i, val in enumerate(self.__random_people(count), 1))
+            'INSERT INTO people (name, birth_date) VALUES (?, ?)',
+            self.__random_people(count)
         )
         self.__cursor.executemany(
             'INSERT INTO students (id) VALUES (?)',
             ((i + 1,) for i in range(count))
         )
         self.__cursor.executemany(
-            'INSERT INTO students_programmes (student, programme, since_date, to_date) VALUES (?, ?, ?, ?)',
+            'INSERT INTO students_programmes (student, programme, since, to_) VALUES (?, ?, ?, ?)',
             self.__random_student_programmes(count)
         )
         max_subj = self.__cursor.execute(
@@ -160,12 +164,8 @@ class DataGenerator:
             )""")
 
         self.__cursor.executemany(
-            'INSERT INTO addresses (city, line1, line2) VALUES (?, ?, ?)',
-            (val for val in self.__random_addresses(count))
-        )
-        self.__cursor.executemany(
-            'INSERT INTO people (name, birth_date, address) VALUES (?, ?, ?)',
-            ((*val, i) for i, val in enumerate(self.__random_people(count), 1))
+            'INSERT INTO people (name, birth_date) VALUES (?, ?)',
+            self.__random_people(count)
         )
         self.__cursor.executemany(
             'INSERT INTO teachers (id, salary) VALUES (?, ?)',
@@ -181,6 +181,22 @@ class DataGenerator:
         self.__cursor.executemany(
             'INSERT INTO teachers_subjects (teacher, subject) VALUES (?, ?)',
             ((i + 1, random.randint(1, max_subj)) for i in range(count))
+        )
+
+    def __generate_addresses(self):
+        max_id = self.__cursor.execute(
+            'SELECT MAX(id) FROM people'
+        ).fetchval()
+        self.__cursor.executemany("DB.DBA.TTLP(?, 'http://ndbi040/data/', 'http://ndbi040/', 0)",
+                                  (("""
+            @prefix vcard: <http://www.w3.org/2006/vcard/ns#> .
+            
+            <address/{0}> a vcard:Address ;
+                vcard:locality "{1}" ;
+                vcard:street-adress "{2}" ;
+                vcard:postal-code "{3}" .
+            <person/{0}> vcard:hasAddress <address/{0}> .
+            """.format(i, *val),) for i, val in enumerate(self.__random_addresses(max_id), 1))
         )
 
     def __random_programmes(self, count: int):
@@ -213,18 +229,11 @@ class DataGenerator:
             yield f'SUBJ#{i + 1} {prog.title()}'
 
     def __random_addresses(self, count: int):
-        line2_prefixes = ['Box', 'Suite', 'Appt']
-
         for _ in range(count):
             city: str = self.__fake.city()
-            street: str = self.__fake.street_name()
-
-            if random.random() < .8:
-                line2: str = None
-            else:
-                line2 = random.choice(line2_prefixes) + \
-                    ' ' + str(random.randint(10, 200))
-            yield (city, str(random.randint(10, 1000)) + ' ' + street, line2)
+            street: str = self.__fake.street_address()
+            postcode: str = self.__fake.postcode()
+            yield (city, street, postcode)
 
     def __random_people(self, count: int):
         for i in range(count):
@@ -249,25 +258,27 @@ class DataGenerator:
         except:
             pass
 
-    def __drop_tables(self):
+    def __drop_all_tables(self):
         """
         we need to drop the tables in inverse order of their creation
         because of foreign keys
         """
-        for table in [
-            'teachers_subjects',
-            'teachers_degrees',
-            'teachers',
-            'students_subjects',
-            'students_programmes',
-            'students',
-            'people',
-            'addresses',
-            'subject_instances',
-            'subjects',
-            'programmes'
-        ]:
+        for table in self.__table_names:
             self.__drop_table(table)
+
+    def __insert_schema(self):
+        with open('schema.ttl', 'r') as schema:
+            self.__cursor.execute(
+                "DB.DBA.TTLP('" +
+                schema.read() +
+                "', '', 'http://ndbi040/', 0)"
+            )
+
+    def __map_rel_to_rdf(self):
+        for table in self.__table_names:
+            self.__cursor.execute(f'GRANT SELECT ON {table} TO "SPARQL"')
+        with open('rdf_mappings.spql', 'r') as mappings:
+            self.__cursor.execute('SPARQL ' + mappings.read())
 
 
 if __name__ == '__main__':
