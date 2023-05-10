@@ -1,0 +1,21 @@
+version: "3.9"
+services:
+  virtuoso:
+    image: "openlink/virtuoso-opensource-7:latest"
+    environment:
+      DBA_PASSWORD: password
+    ports:
+      - "8890:8890"
+    volumes:
+      - ndbi040_db:/database
+  python:
+    environment:
+      VIRTUOSO_PASSWORD: password
+      VIRTUOSO_USER: dba
+      VIRTUOSO_HOST: virtuoso
+    build: .
+    tty: true
+    depends_on:
+      - virtuoso
+volumes:
+  ndbi040_db:
