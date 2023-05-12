@@ -93,6 +93,8 @@ class DataGenerator:
                 birth_date DATE
             )""")
         self.__cursor.execute(
+            """CREATE INDEX idx_people_name ON people (name)""")
+        self.__cursor.execute(
             """CREATE TABLE students (
                 id INT,
                 FOREIGN KEY (id) REFERENCES people(id),
@@ -193,7 +195,7 @@ class DataGenerator:
             
             <address/{0}> a vcard:Address ;
                 vcard:locality "{1}" ;
-                vcard:street-adress "{2}" ;
+                vcard:street-address "{2}" ;
                 vcard:postal-code "{3}" .
             <person/{0}> vcard:hasAddress <address/{0}> .
             """.format(i, *val),) for i, val in enumerate(self.__random_addresses(max_id), 1))
@@ -265,6 +267,8 @@ class DataGenerator:
         """
         for table in self.__table_names:
             self.__drop_table(table)
+
+        self.__cursor.execute('SPARQL CLEAR GRAPH <http://ndbi040/>')
 
     def __insert_schema(self):
         with open('schema.ttl', 'r') as schema:
