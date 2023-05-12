@@ -1,7 +1,7 @@
 -- select teachers who teach subject A and students who studied subject A but had
 -- a different teacher
 
--- this cannot be done using sparql operator FILTER NOT EXIST,
+-- this cannot be done using sparql operator FILTER NOT EXISTS,
 -- because the underlying data are relational tables
 -- and virtuoso complains about too many variables in state:
 -- SQ156: Internal Optimized compiler error : Query too large, variables in state over the limit in sqlvec.c:3026.
