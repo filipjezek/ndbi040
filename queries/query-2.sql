@@ -1,7 +1,7 @@
 -- select average number of retaken subjects per student
 SPARQL
 
-prefix ndbi040: <http://ndbi040/ontology/>
+PREFIX ndbi040: <http://ndbi040/ontology/>
 
 SELECT (AVG(?total_retakes) AS ?avg_retakes) WHERE {
   GRAPH <http://ndbi040/> {
