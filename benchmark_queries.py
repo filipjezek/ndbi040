@@ -31,7 +31,7 @@ class Benchmark:
 
     def test_queries(self, iterations=500):
         curdir = Path(__file__).parent / 'queries'
-        for file in curdir.glob('*.sql'):
+        for file in sorted(curdir.glob('*.sql')):
             with open(str(file), 'r') as query:
                 print(f'{file}:')
                 self.__test_query(query.read(), iterations)

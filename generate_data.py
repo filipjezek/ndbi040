@@ -286,4 +286,4 @@ class DataGenerator:
 
 
 if __name__ == '__main__':
-    DataGenerator().generate(30, 50, 100, 300, 90)
+    DataGenerator().generate(30, 500, 2000, 5000, 600)

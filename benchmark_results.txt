@@ -1,0 +1,8 @@
+/ndbi040/queries/query-1.sql:
+0.34458315459200095 seconds
+
+/ndbi040/queries/query-2.sql:
+0.15669538666399968 seconds
+
+/ndbi040/queries/query-3.sql:
+1.0922610649660018 seconds
