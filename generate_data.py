@@ -277,7 +277,7 @@ class DataGenerator:
     def __map_rel_to_rdf(self):
         for table in self.__table_names:
             self.__cursor.execute(f'GRANT SELECT ON {table} TO "SPARQL"')
-        with open('rdf_mappings.spql', 'r') as mappings:
+        with open('rdf_mappings.sparql', 'r') as mappings:
             self.__cursor.execute('SPARQL ' + mappings.read())
 
 

@@ -1,0 +1,64 @@
+PREFIX ndbi040: <http://ndbi040/ontology/>
+PREFIX aiiso: <http://purl.org/vocab/aiiso/schema#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX time: <http://www.w3.org/2006/time#>
+PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+PREFIX vcard: <http://www.w3.org/2006/vcard/ns#>
+
+# classes for our IRIs
+CREATE IRI CLASS ndbi040:programme_iri "http://ndbi040/data/programme/%d" (IN id INTEGER NOT NULL) .
+CREATE IRI CLASS ndbi040:subject_iri "http://ndbi040/data/subject/%d" (IN id INTEGER NOT NULL) .
+CREATE IRI CLASS ndbi040:subject_instance_iri "http://ndbi040/data/subject/%d/%d" (IN subj INTEGER NOT NULL, IN instance INTEGER NOT NULL) .
+CREATE IRI CLASS ndbi040:person_iri "http://ndbi040/data/person/%d" (in id INTEGER NOT NULL) .
+CREATE IRI CLASS ndbi040:enrollment_interval_iri "http://ndbi040/data/enrollment/%d" (IN id INTEGER NOT NULL) .
+CREATE IRI CLASS ndbi040:time_instant_iri "http://ndbi040/data/time_instant/%U" (IN t VARCHAR NOT NULL) .
+ 
+
+ALTER QUAD STORAGE virtrdf:DefaultQuadStorage
+FROM DB.DBA.programmes AS programmes
+FROM DB.DBA.subjects AS subjects
+FROM DB.DBA.subject_instances AS subject_instances
+FROM DB.DBA.people AS people
+FROM DB.DBA.students AS students
+FROM DB.DBA.students_programmes AS students_programmes
+FROM DB.DBA.students_subjects AS students_subjects
+FROM DB.DBA.teachers AS teachers
+FROM DB.DBA.teachers_degrees AS teachers_degrees
+FROM DB.DBA.teachers_subjects AS teachers_subjects
+{
+  CREATE virtrdf:ndbi040 AS GRAPH <http://ndbi040/>
+  {
+    ndbi040:programme_iri (programmes.id) a aiiso:Programme ;
+      rdfs:label programmes.name .
+    ndbi040:subject_iri (subjects.id) a aiiso:Subject ;
+      rdfs:label subjects.name .
+    ndbi040:subject_instance_iri (subject_instances.instanceof, subject_instances.id) a ndbi040:SubjectInstance ;
+      ndbi040:instanceOf ndbi040:subject_iri (subject_instances.instanceof) ;
+      time:year subject_instances.year .
+    
+    ndbi040:person_iri (people.id) a foaf:Person ;
+      foaf:name people.name ;
+      vcard:bday people.birth_date .
+
+    ndbi040:person_iri (students.id) a ndbi040:Student .
+    ndbi040:person_iri (students_subjects.student)
+      ndbi040:studies ndbi040:subject_instance_iri (subject_instances.instanceof, subject_instances.id)
+      WHERE (^{subject_instances.}^.instanceof = ^{students_subjects.}^.subject) .
+    ndbi040:person_iri (students_programmes.student)
+      ndbi040:enrolled ndbi040:enrollment_interval_iri (students_programmes.id) .
+    ndbi040:enrollment_interval_iri (students_programmes.id) a ndbi040:EnrollmentInterval ;
+      ndbi040:programme ndbi040:programme_iri (students_programmes.programme) ;
+      time:hasBeginning ndbi040:time_instant_iri (students_programmes.since) ;
+      time:hasEnd ndbi040:time_instant_iri (students_programmes.to_) .
+    ndbi040:time_instant_iri (students_programmes.since) time:inXSDDateTime students_programmes.since .
+    ndbi040:time_instant_iri (students_programmes.to_) time:inXSDDateTime students_programmes.to_ .
+
+    ndbi040:person_iri (teachers.id) a ndbi040:Teacher ;
+      ndbi040:salary teachers.salary .
+    ndbi040:person_iri (teachers_degrees.teacher) ndbi040:degree teachers_degrees.degree .
+    ndbi040:person_iri (teachers_subjects.teacher)
+      aiiso:teaches ndbi040:subject_instance_iri (subject_instances.instanceof, subject_instances.id)
+      WHERE (^{subject_instances.}^.instanceof = ^{teachers_subjects.}^.subject) .
+
+  }
+}

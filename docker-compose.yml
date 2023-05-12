@@ -7,7 +7,7 @@ services:
     ports:
       - "8890:8890"
     volumes:
-      - ndbi040_db:/database
+      - db:/database
   python:
     environment:
       VIRTUOSO_PASSWORD: password
@@ -18,4 +18,4 @@ services:
     depends_on:
       - virtuoso
 volumes:
-  ndbi040_db:
+  db:
